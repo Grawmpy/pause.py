@@ -19,24 +19,28 @@ Usage:
     -e, --echo      [ echoes the key press to stdout to use with case statements, etc. ]
 
     Examples:
-    Input:  $ ./pause.sh
+    Input:  $ pause.sh
     Output: $ Press any key to continue...
             $
     
-    Input:  $ ./pause.sh --timer <seconds>
+    Input:  $ pause.sh --timer <seconds>
     Output: $ [timer] Press any key to continue...
             $
     
-    Input:  $ ./pause --prompt "Optional Prompt" --response "Your response"
+    Input:  $ pause --prompt "Optional Prompt" --response "Your response"
     Output: $ Optional Prompt
             $ Your Response
             $
     
-    Input:  $ ./pause -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
+    Input:  $ pause -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
     Output: $ [timer] Optional Prompt
             $ [ Your Response ]
             $
     [format of time will be 00:00:00]
 
-    Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, if given, until contiuation of process.
+    Input:  $ pause -q -t30
+    Output: $ 
+            $
+
+    Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, if given, until the contiuation of process.
 

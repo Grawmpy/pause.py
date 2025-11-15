@@ -2,9 +2,7 @@
 Python3 script that allows for customization, including replacing the prompt, a response option, quiet mode, timer, and echoing to variable.
 The program will echo "Press any key to continue..." indefinitely until either the user presses any key (but [Shift] or arrow keys), or the optional timer [--t | --timer] reaches zero. Timer is shown in [00:00:00] format where hours and minutes hide as it reaches zero until the final count is [00]. The program allows for quiet running with no prompt, just a pause with cursor blink [-q | --quiet] that must have a timer set as well in order to run. There is an option to place an alternative prompt which replaces the default with your own [-p | --prompt ,(Must be within double quotes)] and the ability to also add response text to the output [-r | --response (Must be within double quotes)].I have added the option to send the key press to be able to be used with command substitution in order to populate variables and work with case statements, etc.
 
-When I migrated to Linux from Windows/DOS, I was rather surprised that there wasn't some type of "pause" function of any sort within the basic functioning of Linux. I have played around with the script for a while and have tried to make this as close to pure bash as possible in every directive I used keeping commands to those built-in. I have also spent many hours trying very hard to get the time function on the countdown to be as accurate as possible using different sources but unfortunately there is no way to get the precision I was hoping for through simple bash. As it is now there is a loss of about a second during the course of an hour.
-
-I wanted a function in bash where I could just give the command "pause" and it would pause and I have done that with a little extra.
+When I migrated to Linux from Windows/DOS, I was rather surprised that there wasn't some type of "pause" function of any sort within the basic functioning of Linux. 
 
 The default prompt is "Press any key to continue..."
 

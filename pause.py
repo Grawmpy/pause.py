@@ -49,10 +49,11 @@ import select
 import tty
 import termios
 import os
+import signal 
 
 # --- Metadata and Descriptions ---
 SCRIPT = os.path.basename(sys.argv[0])
-VERSION = '5.0.3' # Updated version number
+VERSION = '5.0.4' # Updated version number
 AUTHOR = 'Grawmpy <Grawmpy@gmail.com> (CSPhelps)'
 COPYRIGHT = """
 GPL3.0 License. Software is intended as free use and is offered 'is is' 
@@ -61,10 +62,6 @@ DESCRIPTION = """
 A simple script that interrupts the current process until optional 
 timer reaches zero or the user presses any alphanumeric or [Enter] 
 key. 
-
-Optional custom prompt message and response text. 
-
-Allows for quiet mode with -q, --quiet [must be used in conjunction with -t, --timer <seconds>]
 
 Command will interrupt process indefinitely until user presses any 
 alphanumeric key or optional timer reaches [00].
@@ -75,7 +72,7 @@ DEFAULT_PROMPT = "Press any key to continue..."
 # ---------------------------------
 
 def format_seconds(seconds):
-    """Converts seconds into a [DD:HH:MM:SS] style format string."""
+    # ... (Your existing format_seconds function) ...
     if seconds is None:
         return ""
     
@@ -106,22 +103,44 @@ def wait_for_key_or_timer(timeout=None, prompt=DEFAULT_PROMPT, response_text=Non
     
     pressed_key = None 
     
-    try:
-        tty.setcbreak(fd)
-        start_time = time.time()
-        
-        sys.stderr.write(HIDE_CURSOR)
-        sys.stderr.flush()
-        
-        while True:
-            # Check for input immediately using select with a small timeout
-            # A 0.1 second timeout ensures we check for keys very frequently
-            if select.select([sys.stdin], [], [], 0.1)[0]:
-                pressed_key = sys.stdin.read(1)
-                break # Exit loop immediately on keypress
+    # --- Start of the revised logic ---
 
-            # Check time conditions
-            if timeout is not None:
+    if timeout is None:
+        # Case 1: Indefinite wait. Use standard input() which waits for [Enter].
+        try:
+            # We don't need cbreak or cursor hiding here if we use input()
+            # input() handles the prompt display naturally.
+            if not quiet:
+                # Use print for standard line-based interaction
+                print(f"{prompt}", end='', flush=True)
+            
+            # This blocks until the user presses [Enter]. The result is the line typed.
+            # We capture it as 'pressed_key' for compatibility with existing echo logic.
+            pressed_key = sys.stdin.readline().strip('\n') # Read the whole line
+            
+            # After input(), we jump straight to the post-exit logic.
+
+        except (KeyboardInterrupt, EOFError):
+            # Handle Ctrl+C or end of input gracefully
+            pass
+
+    else:
+        # Case 2: Timer is set. We must use cbreak/select for live countdown.
+        try:
+            # Set to cbreak mode for immediate character detection for the *timer* scenario
+            tty.setcbreak(fd)
+            start_time = time.time()
+            
+            sys.stderr.write(HIDE_CURSOR)
+            sys.stderr.flush()
+            
+            while True:
+                # Check for input immediately using select with a small timeout
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    pressed_key = sys.stdin.read(1) # Read a single character immediately
+                    break # Exit loop immediately on keypress
+
+                # Check time conditions
                 elapsed_time = time.time() - start_time
                 remaining = int(timeout - elapsed_time)
 
@@ -130,81 +149,50 @@ def wait_for_key_or_timer(timeout=None, prompt=DEFAULT_PROMPT, response_text=Non
                 
                 timer_display = format_seconds(remaining)
                 output = f"{ERASE_LINE}[{timer_display}] {prompt}\r"
-            else:
-                # If no timeout, show prompt only
-                output = f"{ERASE_LINE}{prompt}\r"
             
-            # Display output if not quiet
-            if not quiet:
-                sys.stderr.write(output)
-                sys.stderr.flush()
-            
-            # Continue looping. The select.select(..., 0.1) handles the sleep/waiting.
+                # Display output if not quiet
+                if not quiet:
+                    sys.stderr.write(output)
+                    sys.stderr.flush()
 
-        # Clear final prompt line
-        sys.stderr.write(ERASE_LINE)
-        sys.stderr.flush()
+            # Clear final prompt line in timer mode
+            sys.stderr.write(ERASE_LINE)
+            sys.stderr.flush()
 
-    finally:
-        # Restore original terminal settings
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        # Show the cursor again
-        sys.stderr.write(SHOW_CURSOR)
-        sys.stderr.flush()
+        finally:
+            # Restore original terminal settings ONLY if we entered cbreak mode (timer was set)
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            # Show the cursor again
+            sys.stderr.write(SHOW_CURSOR)
+            sys.stderr.flush()
 
     # --- Handle Post-Exit Logic (Outside the try...finally block) ---
     if response_text:
         sys.stderr.write(f"{response_text}\n")
         sys.stderr.flush()
     
-    if echo_key and pressed_key:
-        sys.stdout.write(pressed_key)
+    # Note: When using input() (no timer), pressed_key contains the full line.
+    # When using the timer, it contains only the first key pressed.
+    if echo_key and pressed_key is not None:
+        sys.stdout.write(f"Key/Input captured: '{pressed_key}'\n")
         sys.stdout.flush()
 
-
+# ... (rest of your main() function remains the same) ...
 def main():
+    # ... (main function content - no changes needed here) ...
     full_epilog = f"""
 Default prompt: {DEFAULT_PROMPT}
-
-Usage:
-{SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] [-e|--echo]
-
-    -p, --prompt    [ input required (string must be in quotes) ]
-    -t, --timer     [ number of seconds ]
-    -r, --response  [ requires text (string must be in quotes) ]
-    -e, --echo      [ echoes the key pressed to stdout if present. ]
-    -h, --help      [ this information ]
-    -q, --quiet     [ quiets text, requires timer be set. ]
-
-Examples:
-Input:  $ {SCRIPT}
-Output: $ {DEFAULT_PROMPT}
-
-Input:  $ {SCRIPT} -t <seconds>
-Output: $ [timer] {DEFAULT_PROMPT}
-
-Input:  $ {SCRIPT} --prompt "Optional Prompt" --response "Your response"
-Output: $ Optional Prompt
-        $ Your Response
-
-Input:  $ {SCRIPT} -p "Optional Prompt" -r "Your response"
-
-Author: {AUTHOR}
-{COPYRIGHT}
+... (epilog text) ...
 """
 
     parser = argparse.ArgumentParser(
         description=DESCRIPTION,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=full_epilog # <-- Insert the detailed help message here
+        epilog=full_epilog
     )
 
     parser.add_argument('-t', '--timer', type=int, help='Number of seconds to wait.')
-    parser.add_argument('-p', '--prompt', type=str, default=DEFAULT_PROMPT, help='Custom prompt message.')
-    parser.add_argument('-r', '--response', type=str, help='Requires text to be displayed after interruption.')
-    parser.add_argument('-q', '--quiet', action='store_true', help='Quiets text, implicitly requires timer be set.')
-    parser.add_argument('-e', '--echo', action='store_true', help='Echoes the key pressed to stdout if present.')
-    parser.add_argument('--version', action='version', version=f'%(prog)s v{VERSION}')
+    # ... (other arguments) ...
 
     args = parser.parse_args()
 
@@ -218,7 +206,7 @@ Author: {AUTHOR}
         prompt=args.prompt,
         response_text=args.response,
         quiet=args.quiet,
-        echo_key=args.echo # Pass the new argument
+        echo_key=args.echo
     )
     sys.exit(0)
 

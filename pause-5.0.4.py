@@ -203,6 +203,7 @@ Author: {AUTHOR}
         epilog=full_epilog
     )
 
+    # These lines define the attributes 'timer', 'prompt', 'response', 'quiet', 'echo'
     parser.add_argument('-t', '--timer', type=int, help='Number of seconds to wait.')
     parser.add_argument('-p', '--prompt', type=str, default=DEFAULT_PROMPT, help='Custom prompt message.')
     parser.add_argument('-r', '--response', type=str, help='Requires text to be displayed after interruption.')
@@ -210,10 +211,11 @@ Author: {AUTHOR}
     parser.add_argument('-e', '--echo', action='store_true', help='Echoes the key pressed to stdout if present.')
     parser.add_argument('--version', action='version', version=f'%(prog)s v{VERSION}')
     
-    # FIX: Moved this line up so 'args' is defined before the subsequent logic checks
+    # args is defined here, and should contain the attributes above
     args = parser.parse_args() 
 
     # Logic checks as per original bash script
+    # This line now accesses args.quiet and args.timer which should exist
     if args.quiet and not args.timer:
         print("Error: Timer must be set when using --quiet mode.")
         sys.exit(1)
@@ -226,7 +228,7 @@ Author: {AUTHOR}
         echo_key=args.echo
     )
     sys.exit(0)
-
+    
 if __name__ == "__main__":
     # Check if we are running interactively, which is required for termios
     if not sys.stdin.isatty():
